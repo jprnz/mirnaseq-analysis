@@ -1,0 +1,4 @@
+sample	path
+A	data/A_L001_R1.fastq.gz
+B	data/B_L001_R1.fastq.gz
+B	data/B_L002_R1.fastq.gz

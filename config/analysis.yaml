@@ -1,0 +1,12 @@
+# List of definitions of analyses to be performed
+# See config/README.md for more information
+analyses:
+  - analysis: pairwise
+    design: ~ condition
+    samples: config/samples.tsv
+    pca:
+      pcs: [PC1, PC2]
+      color_by: condition
+    results:
+      contrasts:
+        - ["condition", "all"]

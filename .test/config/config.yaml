@@ -1,0 +1,24 @@
+# Ensembl
+reference_args:
+  species: homo_sapiens
+  build: GRCh38
+  release: 110
+
+# Small RNA Datasets
+# Available datasets are defined in "datasets.yaml"
+species_id: hsa
+mirna_dataset: mirbase
+pirna_dataset: pirnabank
+
+# Library / UMI
+library:
+  adaptor_5: AACTGTAGGCACCATCAAT
+  adaptor_3: null
+  umi_length: 12
+  min_read: 5
+
+# Paths
+fastqs: config/fastqs.tsv
+datadir: processed
+reference_path: /hpc/group/sgt/ensembl-reference
+

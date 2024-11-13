@@ -1,0 +1,8 @@
+jobs: 200
+latency-wait: 90
+rerun-incomplete: true
+rerun-triggers: mtime
+use-conda: true
+default-resources:
+  - tmpdir=".temp"
+  - runtime="48h"

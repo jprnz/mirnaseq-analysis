@@ -1,0 +1,83 @@
+import os
+import re
+import glob
+import warnings
+import pandas as pd
+
+from pathlib import Path
+
+# Turn off performance warnings
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
+# Get resource path
+resource_path = Path(workflow.main_snakefile).parents[1] / "resources"
+
+# Read in config
+configfile: "config/config.yaml"
+configfile: resource_path / "datasets.yaml"
+
+# Paths
+datadir = config['datadir']
+
+# Configuration variables
+ref_args = config['reference_args']
+ref_path = config['reference_path'] + "/{species}/{release}-{build}".format(**ref_args)
+ref_file = "{species}.{build}".format(**ref_args)
+ref_log = ref_path + "/logs"
+
+# Ensembl refrences
+genome_fasta = f"{ref_path}/{ref_file}.dna_primary_assembly.fa"
+ncrna_fasta  = f"{ref_path}/{ref_file}.ncrna.fa"
+genome_gtf   = f"{ref_path}/{ref_file}.gtf"
+genome_index = f"{ref_path}/bowtie2-index/dna.1.bt2"
+ncrna_index  = f"{ref_path}/bowtie2-index/ncrna.1.bt2"
+
+# Dataset name
+mirna_dataset = config['mirna_dataset']
+pirna_dataset = config['pirna_dataset']
+
+# FASTA / regex parameters
+mirna_config = config['mirna_datasets'][mirna_dataset]
+pirna_config = config['pirna_datasets'][pirna_dataset]
+
+# mibase type species id
+species = config['species_id']
+
+# Load fastq files
+files = pd.read_csv(
+  config['fastqs'], sep='\t',
+  index_col="sample",
+  dtype='object').sort_index()
+samples = files.index.unique()
+
+# More paths
+fastqdir    = f"{datadir}/d00_fastq"
+aligndir    = f"{datadir}/d01_align"
+dedupdir    = f"{datadir}/d02_dedup"
+countdir    = f"{datadir}/d03_count"
+analysisdir = f"{datadir}/d03_analysis"
+multiqcdir  = f"{datadir}/d04_multiqc"
+
+# Set constraints for wildcards
+wildcard_constraints:
+  sample  = "|".join(samples),
+  dataset = "mature|hairpin|pirna|ncrna|genome",
+  reference = "dna|ncrna|cdna"
+
+# Rules
+include: "rules/reference.smk"
+include: "rules/fastq.smk"
+include: "rules/align.smk"
+include: "rules/dedup.smk"
+include: "rules/count.smk"
+include: "rules/multiqc.smk"
+#include: "rules/deseq.smk"
+#include: "rules/gsea.smk"
+#include: "rules/delivery.smk"
+
+## Main target
+#rule all:
+#    input:
+#        rules.run_multiqc.input,
+#        rules.run_gsea.input
+#

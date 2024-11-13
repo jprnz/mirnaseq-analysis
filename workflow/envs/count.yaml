@@ -1,0 +1,10 @@
+name:
+  counts
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - samtools
+  - subread
+  - bedtools
+  - pandas

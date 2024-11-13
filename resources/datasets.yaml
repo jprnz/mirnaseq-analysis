@@ -1,0 +1,19 @@
+mirna_datasets:
+  mirbase:
+    mature: "mirbase/mature.fa.gz"
+    mature_regex: "{species}"
+    hairpin: "mirbase/hairpin.fa.gz"
+    hairpin_regex: "{species}"
+  mirgenedb:
+    mature: "mirgenedb/ALL.fas.gz"
+    mature_regex: "{species}"
+    hairpin: "mirgenedb/ALL.fas.gz"
+    hairpin_regex: "{species}"
+
+pirna_datasets:
+  pirnabank:
+    fasta: "pirnabank/pirnabank.fa.gz"
+    regex: "{species}"
+  pirnadb:
+    fasta: "pirnadb/pirnadb.fa.gz"
+    regex: "{species}"
