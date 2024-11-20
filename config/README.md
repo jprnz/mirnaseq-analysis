@@ -32,9 +32,6 @@ analysese:
         color_by: variable used to determine color
         shape_by: variable used to determine shape
         label_by: variable used to determine label
-        color_legend: name to use for color legend
-        shape_legend: name to use for shape legend
-        label_legend: name to use for label legend
         alpha: transparency of points, as a percent
         size: size of points
     heatmap:
