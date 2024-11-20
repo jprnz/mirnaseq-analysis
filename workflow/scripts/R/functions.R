@@ -31,7 +31,7 @@ read_samplefile = function(filename) {
 
     # Convert strings to factors
     for (col in colnames(ret)) {
-        ret[, col] = factor(ret[, col], levels=unique(ret[, col]))
+        ret[, col] = factor(as.character(ret[, col]), levels=unique(ret[, col]))
     }
 
     return(ret)
@@ -212,30 +212,17 @@ get_group_counts = function(dds, config) {
     return(ret)
 }
 
-format_tab = function(res, dds, genes, cnt) {
+format_tab = function(res, dds, cnt, genes=NA) {
     dat = as.data.frame(colData(dds))
     res = as.data.frame(res)
     res$mirna_id = rownames(res)
-
     ret = data.table("mirna_id"=rownames(res))
-    ret = merge(ret, genes, all.x=TRUE)
+
+    #ret = merge(ret, genes, all.x=TRUE)
     ret = merge(ret, res)
     ret = merge(ret, cnt)
     ret[, baseMean := NULL]
     ret = ret[order(ret$pvalue, na.last=TRUE),]
-    return(ret)
-}
-
-format_rnk = function(tab) {
-    if ("stat" %in% names(tab)) {
-        col = "stat"
-    } else {
-        col = "log2FoldChange"
-    }
-    keep = which(!is.na(tab$pvalue))
-    ret = tab[keep, c("symbol", col), with=FALSE]
-    ret[, symbol := toupper(symbol)]
-    setorderv(ret, col)
     return(ret)
 }
 
@@ -286,26 +273,17 @@ write_counts = function(mat, filename) {
 # Plotting
 plot_pca = function(
     mat, dat, pcs=c("PC1", "PC2"),
-    color_by=NULL, color_legend=NULL,
-    shape_by = NULL, shape_legend=NULL,
-    label_by=NULL, label_legend=NULL,
-    size=NULL, alpha=NULL, filename=NULL) {
+    color_by=NULL, shape_by=NULL, 
+    label_by=NULL, size=NULL, alpha=NULL,
+    filename=NULL) {
 
     require(ggplot2)
     require(ggrepel)
     require(data.table)
 
     # Set defaults
-    size <- ifelse(is.null(size), 4, size)
+    size <- ifelse(is.null(size), 3.5, size)
     alpha <- ifelse(is.null(alpha), 1, alpha)
-    color_legend <- ifelse(is.null(color_legend), color_by, color_legend)
-    shape_legend <- ifelse(is.null(shape_legend), shape_by, shape_legend)
-    label_legend <- ifelse(is.null(label_legend), label_by, label_legend)
-
-    # Set legend titles
-    color_guide <- guide_legend(color_legend)
-    shape_guide <- guide_legend(shape_legend)
-    label_guide <- guide_legend(label_legend)
 
     # rlog values
     mat = assay(rlog(dds))
@@ -321,22 +299,21 @@ plot_pca = function(
     pctvar <- pctvar[which(colnames(pca$x) %in% pcs)]
 
     # Make base plot
-    ret <- ggplot(plt, aes_string(x=pcs[1], y=pcs[2], color=color_by, shape=shape_by))
+    ret <- ggplot(plt, aes_string(x=pcs[1], y=pcs[2], color=color_by, shape=shape_by, label=label_by))
     ret <- ret + xlab(paste0(pcs[1], " (", pctvar[1], "% variance)"))
     ret <- ret + ylab(paste0(pcs[2], " (", pctvar[2], "% variance)"))
     ret <- ret + geom_point(size=size, alpha=alpha)
-    ret <- ret + guides(color=color_guide, shape=shape_guide)
     ret <- ret + theme_light()
 
     if (!is.null(label_by)) {
         ret <- ret + geom_text_repel(
             aes_string(label=label_by),
+            size=2.75,
             box.padding=0.5,
             point.padding=0.5,
             min.segment.length=0,
             max.overlaps=Inf,
             show.legend=FALSE)
-        ret <- ret + guides(label=label_guide)
     }
 
     # Save if requested
@@ -350,8 +327,8 @@ plot_pca = function(
 
 get_contrast_samples = function(dat, cmp, comparisons) {
     ctr = comparisons$contrast[[cmp]]
-    if (!is.null(ctr) & ctr[1] %in% colnames(ctr)) {
-        ret = rownames(dat[which(dat[,ctr[1]] %in% ctr[2:3]),, drop=FALSE])
+    if (!is.null(ctr) & ctr[1] %in% colnames(dat)) {
+        ret = rownames(dat[which(dat[,ctr[1]] %in% ctr[2:3]),, drop=TRUE])
     } else {
         ret = rownames(dat)
     }
@@ -359,7 +336,7 @@ get_contrast_samples = function(dat, cmp, comparisons) {
 }
 
 is_true = function(x) {
-    ret = ifelse(!is.null(x) && x == TRUE, TRUE, FALSE)
+    ret = ifelse(!is.null(x) & x == TRUE, TRUE, FALSE)
     return(ret)
 }
 
@@ -375,6 +352,7 @@ plot_heatmap = function(res, cmp, dds, config, comparisons, filename, n=100) {
     # Determine which samples to plot
     if (is_true(config$heatmap$only_contrasts)) {
         samples = get_contrast_samples(dat, cmp, comparisons)
+        dat = dat[samples,]
     } else {
         samples = rownames(dat)
     }
@@ -414,22 +392,22 @@ plot_sparsity = function(dds, filename) {
     dev.off()
 }
 
-plot_volcano = function(res, filename, ntop=25) {
+plot_volcano = function(res, filename, ntop=25, genes=NA) {
     require(ggrepel)
     # Ablines
     vline = c(-2, 2)
     hline = -log10(0.05)
+    res = as.data.frame(copy(res))
+    dat = as.data.table(res, keep.rownames="mirna_id")
 
     # Filter NA
-    dat = as.data.table(res, keep.rownames="mirna_id")
     dat = dat[
         !is.na(pvalue) &
-            !is.na(padj) &
-            !is.na(log2FoldChange)]
+        !is.na(padj) &
+        !is.na(log2FoldChange)]
 
-    # Add genes
-    dat = merge(dat, genes)
-    dat[is.na(symbol) | symbol == "", symbol := mirna_id]
+    # Format symbol
+    dat[, symbol := sub("^.*-", "", mirna_id)]
 
     # Add stats and do selection
     dat[, "pval" := -log10(pvalue)]

@@ -1,8 +1,8 @@
 rule dedup:
   input:
-    bam = aligndir + "/{sample}-{dataset}.bam"
+    aligndir + "/{sample}-{dataset}.bam"
   output:
-    bam = dedupdir + "/{sample}-{dataset}.bam",
+    dedupdir + "/{sample}-{dataset}.bam"
   log:
     dedupdir + "/logs/{sample}-{dataset}.log"
   conda:
@@ -10,11 +10,12 @@ rule dedup:
   resources:
     mem_mb = 16000
   shell:
-      "(set -x; umicollapse bam"
-      "  --umi-separator _"
-      "  -i {input}"
-      "  -o {output}) &> {log}"
+      "(set -x; "
+      "  jar=\"$(readlink -f $(which umicollapse)).jar\" &&"
+      "  java -Xss1G -Xms8G -Xmx16G -jar $jar bam"
+      "    --two-pass --umi-separator _"
+      "    -i {input}"
+      "    -o {output}) &> {log}"
 
 rule run_dedup:
-  input:
-    expand(dedupdir + "/{sample}.bam", sample=samples)
+  input: expand(rules.dedup.output, sample=samples, dataset=datasets)

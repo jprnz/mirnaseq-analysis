@@ -1,8 +1,9 @@
 jobs: 200
+use-conda: true
 latency-wait: 90
 rerun-incomplete: true
 rerun-triggers: mtime
-use-conda: true
+scheduler: greedy
 default-resources:
   - tmpdir=".temp"
   - runtime="48h"

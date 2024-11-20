@@ -1,21 +1,19 @@
-#log <- file(snakemake@log[[1]], open="wt")
-#sink(log)
-#sink(log, type="message")
+log <- file(snakemake@log[[1]], open="wt")
+sink(log)
+sink(log, type="message")
 
 # Input
-genesfile <- snakemake@input[['genes']]
 countsfile <- snakemake@input[['counts']]
 samplefile <- snakemake@input[['samples']]
 configfile <- snakemake@input[['config']]
 analysis_name <- snakemake@wildcards[['analysis']]
+dataset_name <- snakemake@wildcards[['dataset']]
 threads <- snakemake@threads
 
 # Output
 output_xls <- snakemake@output[['xls']]
-#output_dat <- snakemake@output[['dat']]
-#output_cnt <- snakemake@output[['cnt']]
-#output_norm <- snakemake@output[['norm']]
-save.image()
+output_cnt <- snakemake@output[['cnt']]
+output_norm <- snakemake@output[['norm']]
 
 library("DESeq2")
 library("RColorBrewer")
@@ -24,7 +22,6 @@ library("data.table")
 library("pheatmap")
 library("yaml")
 library("ggplot2")
-library("cowplot")
 
 # Set seed, scipen and load functions
 source(file.path(snakemake@scriptdir, "functions.R"))
@@ -50,7 +47,7 @@ count <- count[apply(count, 1, max) >= 10, ]
 model <- as.formula(config$design)
 
 # Read genes file
-genes <- fread(genesfile)
+#genes <- fread(genesfile)
 
 # Make DESeq data object and run analysis
 dds <- DESeqDataSetFromMatrix(countData=count, colData=coldat, design=model)
@@ -65,11 +62,9 @@ res = get_results(dds, comparisons, config$results)
 
 # Make output tables and rnk files
 tab <- list()
-rnk <- list()
 grp <- get_group_counts(dds, config)
 for (cmp in names(res)) {
-    tab[[cmp]] <- format_tab(res[[cmp]], dds, genes, grp)
-    rnk[[cmp]] <- format_rnk(tab[[cmp]])
+    tab[[cmp]] <- format_tab(res[[cmp]], dds, grp)
 }
 
 # Write results
@@ -77,14 +72,11 @@ for (cmp in names(res)) {
    tab_filename <- paste0(tabpath, "/", cmp, ".csv")
    fwrite(tab[[cmp]], file=tab_filename)
 
-   rnk_filename <- paste0(rnkpath, "/", cmp, ".rnk")
-   fwrite(rnk[[cmp]], file=rnk_filename, sep="\t", col.names=FALSE)
-
    plt_filename <- paste0(prefix, "/Heatmap-", cmp, ".pdf")
    plot_heatmap(res, cmp, dds, config, comparisons, plt_filename)
 
    plt_filename <- paste0(prefix, "/Volcano-", cmp, ".pdf")
-   plot_volcano(res[[cmp]], genes, plt_filename)
+   plot_volcano(res[[cmp]], plt_filename)
 }
 
 # Plot disp estimates
@@ -106,5 +98,5 @@ write_counts(counts(dds, normalized=TRUE), output_norm)
 
 # Write workspace
 cat("Writting data image...\n")
-save.image(file=output_dat)
+save.image(file=paste0(prefix, "/analysis.Rdata"))
 

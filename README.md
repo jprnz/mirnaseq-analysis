@@ -76,6 +76,5 @@ git push -u origin analysis
 
 ## Finalizing things
 Once an analysis is complete, ensure that
-- [ ] `Methods.docx` in the delivery folder is accurate and up-to-date
 - [ ] The delivery folder is uploaded to Box
 - [ ] All your changes are committed pushed to your project's repository

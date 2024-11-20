@@ -83,14 +83,14 @@ rule fastp:
 
 rule run_fastq_combine:
   input:
-      expand(fastqdir + "/fastqs/{sample}.fastq.gz", sample=samples)
+      expand(rules.fastq_combine.output, sample=samples)
 
 rule run_umi_extract:
   input:
-      expand(fastqdir + "/umi/{sample}.fastq.gz", sample=samples)
+      expand(rules.umi_extract.output, sample=samples)
 
 rule run_fastp:
     input:
-        expand(fastqdir + "/json_reports/{sample}.json", sample=samples)
+        expand(rules.fastp.output, sample=samples)
 
 

@@ -1,13 +1,13 @@
 # Order of alignments
-dataset_order = ["mature"] #, "hairpin", "pirna", "ncrna", "genome"]
+dataset_order = ["mature", "hairpin"]
 
 # FASTAs used for indexing
 datasets = {
   "mature":  aligndir + "/fasta/mature.fasta",
-  #"hairpin": aligndir + "/fasta/hairpin.fasta",
-  #"pirna":   aligndir + "/fasta/pirna.fasta",
-  #"ncrna":   ncrna_fasta,
-  #"genome":  genome_fasta
+  "hairpin": aligndir + "/fasta/hairpin.fasta",
+  # "pirna":   aligndir + "/fasta/pirna.fasta",
+  # "ncrna":   ncrna_fasta,
+  # "genome":  genome_fasta
 }
 
 # Dataset FASTA files (to be filtered)
@@ -55,14 +55,14 @@ def get_dataset_index(wc):
   elif wc.dataset == "ncrna":
     ret = ncrna_index
   else:
-    ret = f"{aligndir}/index/{wc.dataset}/index.1.bt2"
+    ret = f"{aligndir}/index/{wc.dataset}/index.1.ebwt"
   return ret
 
 rule make_mirna_fasta:
   input:
     ancient(get_dataset_fasta)
   output:
-    temp(aligndir + "/fasta/{dataset}.fasta")
+    aligndir + "/fasta/{dataset}.fasta"
   log:
     aligndir + "/logs/seqkit-{dataset}.log"
   conda:
@@ -71,7 +71,7 @@ rule make_mirna_fasta:
     mem_mb = 8000
   shell:
     r"(set -x; "
-    r"  seqkit grep -i -r -n -p '{species}' {input} "
+    r"  seqkit grep -i -r -n -p '^{species}(-|_)' {input} "
     r"  | seqkit seq --rna2dna"
     r"  | sed -r 's/>([^\S\|]+).*/>\1/'"
     r"  | seqkit rmdup -n > {output}) &> {log}"
@@ -80,18 +80,17 @@ rule bowtie_index:
   input:
     ancient(lambda wc: datasets[wc.dataset])
   output:
-    aligndir + "/index/{dataset}/index.1.bt2"
+    aligndir + "/index/{dataset}/index.1.ebwt"
   log:
     aligndir + "/logs/index-{dataset}.log"
   params:
-    path = aligndir + "/index/{dataset}/index"
+    path = lambda wc: aligndir + f"/index/{wc.dataset}/index"
   conda:
     "../envs/bowtie.yaml"
   resources:
     mem_mb = 16000
-  threads: 32
   shell:
-    "(set -x; bowtie2-build --threads {threads} {input} {params.path}) &> {log}"
+    "(set -x; bowtie-build {input} {params.path}) &> {log}"
 
 rule bowtie_align:
   input:
@@ -101,9 +100,9 @@ rule bowtie_align:
     bam = aligndir + "/{sample}-{dataset}.bam",
     unal = aligndir + "/unaligned/{sample}-{dataset}.fastq"
   log:
-    aligndir + "/logs/bowtie2-{sample}-{dataset}.log"
+    aligndir + "/logs/{sample}-{dataset}.log"
   params:
-    index = lambda wc: input: input.idx.removesuffix(".1.bt2"),
+    index = lambda wc, input: input.idx.removesuffix(".1.ebwt"),
     tmpdir = lambda wc: f"{aligndir}/.temp/{wc.dataset}/{wc.sample}"
   conda:
     "../envs/bowtie.yaml"
@@ -114,18 +113,18 @@ rule bowtie_align:
     "(set -x;"
     "  [[ -e {params.tmpdir} ]] && rm -r {params.tmpdir};"
     "  mkdir -p {params.tmpdir};"
-    "  bowtie2"
+    "  bowtie"
+    "    -v 2"
     "    -k 1"
+    "    --best"
+    "    --tryhard"
     "    --no-unal"
-    "    --end-to-end"
-    "    -L5"
-    "    --very-sensitive"
-    "    --mm"
-    "    --time"
-    "    -x {params.index}"
-    "    -U {input.fq}"
+    "    --chunkmbs 2056"
+    "    --mm --time -S"
+    "    --threads 32"
     "    --un {output.unal}"
-    "    --threads 16"
+    "    -x {params.index}"
+    "    {input.fq}"
     "  | samtools sort"
     "    -u -o '{output.bam}##idx##{output.bam}.bai'"
     "    -T {params.tmpdir}"
@@ -134,6 +133,6 @@ rule bowtie_align:
     ") &> {log}"
 
 rule run_align:
-  input: expand(
-    aligndir + "/{sample}-{dataset}.bam", dataset=datasets, sample=samples)
+  input:
+    expand(rules.bowtie_align.output, dataset=datasets, sample=samples)
 

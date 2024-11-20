@@ -38,7 +38,9 @@ echo "---Installing mamba..."
 # Install snakemake
 echo "---Installing analysis environment..."
 (
-  mamba env create -f env.yaml 
+  mamba env create -f env.yaml \
+    && find $path/conda \
+    | xargs -P10 -n20 -I{} touch {}
 ) || error "Could not create analysis environment"
 
 echo "All done, setup sucessful!"

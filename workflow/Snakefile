@@ -9,11 +9,12 @@ from pathlib import Path
 # Turn off performance warnings
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
-# Get resource path
-resource_path = Path(workflow.main_snakefile).parents[1] / "resources"
-
 # Read in config
 configfile: "config/config.yaml"
+configfile: config['analysis']
+
+# Get resource path and read config
+resource_path = Path(workflow.main_snakefile).parents[1] / "resources"
 configfile: resource_path / "datasets.yaml"
 
 # Paths
@@ -55,7 +56,7 @@ fastqdir    = f"{datadir}/d00_fastq"
 aligndir    = f"{datadir}/d01_align"
 dedupdir    = f"{datadir}/d02_dedup"
 countdir    = f"{datadir}/d03_count"
-analysisdir = f"{datadir}/d03_analysis"
+deseqdir    = f"{datadir}/d03_deseq"
 multiqcdir  = f"{datadir}/d04_multiqc"
 
 # Set constraints for wildcards
@@ -71,7 +72,7 @@ include: "rules/align.smk"
 include: "rules/dedup.smk"
 include: "rules/count.smk"
 include: "rules/multiqc.smk"
-#include: "rules/deseq.smk"
+include: "rules/deseq.smk"
 #include: "rules/gsea.smk"
 #include: "rules/delivery.smk"
 
